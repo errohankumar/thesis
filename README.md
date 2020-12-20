@@ -1,4 +1,4 @@
-[!alt-text](https://github.com/errohankumar/thesis/blob/main/webpage%20/20201210.png)
+![alt text](https://github.com/errohankumar/thesis/blob/main/webpage%20/20201210.png)
 # Streaming-Real-Time-Using-Apache-Kafka
 An extension of my thesis to produce streaming data to the client server and display the forecast using javascript. The forecasts are made on the time-series data
 of German-Luxembourg spot market and the real time forecasts for the 24 hours ahead are published to the Kafka brokers. The forecasts are then displayed using
