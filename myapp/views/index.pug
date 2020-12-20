@@ -1,0 +1,23 @@
+extends layout
+
+include externalScripts/bootstrap
+include externalScripts/visualization
+
+block externalLib
+  +bootstrap("link")
+  +visualization("link")
+  link(rel="stylesheet", href="/intro/intro.css")
+  link(rel="stylesheet", href="about/about.css")
+
+block content
+
+  include ../public/intro/intro
+  include ../public/about/about
+  include ../public/visualization/visualization.pug
+  include ../public/navbar/navbar
+
+block externalScripts
+  include externalScripts/bokeh
+  script(src="/socket.io/socket.io.js")
+  +bootstrap("script")
+  +visualization("script")

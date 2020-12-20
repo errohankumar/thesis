@@ -1,0 +1,11 @@
+#folder
+Datasets/*
+softwares/*
+
+## generic files to ignore
+*.json
+*.txt
+
+Analysis.py
+sarima_model.py
+*.html

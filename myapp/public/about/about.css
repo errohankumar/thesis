@@ -1,0 +1,34 @@
+<!--
+.numberCircle {
+    border-radius: 50%;
+    width: 90px;
+    height: 90px;
+    padding: 4.5% 0px 0px 3.5%;
+
+    background: #fff;
+    border: 5px solid #00ffe4;
+    color: #666;
+
+    box-shadow:  0 0 10px 5px rgba(0, 245, 120, 0.6);
+    -moz-box-shadow: 0 0 10px  5px  rgba(0, 245, 120, 0.6);
+    -webkit-box-shadow: 0 0 10px 5px  rgba(0, 245, 120, 0.6);
+    -o-box-shadow: 0 0 10px 5px  rgba(0, 245, 120, 0.6);
+}
+
+.number{
+    position: absolute;
+    z-index: 1;
+
+    padding: 20px;
+    font: 40px Arial, sans-serif;
+}
+
+.aboutCost{
+    margin-top: 5%;
+}
+
+.aboutCostText{
+    color: rgb(85, 85, 85);
+}
+
+-->

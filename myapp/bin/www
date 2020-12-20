@@ -1,0 +1,273 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('expressjs:server');
+var http = require('http');
+const Kafka = require('node-rdkafka');
+const crypto = require('crypto');
+
+/**
+ * Create a Kakfa-Consumer
+ */
+
+function createKafkaConsumer(socket){
+
+  let gid = crypto.randomBytes(10).toString("hex");
+  var consumer = new Kafka.KafkaConsumer({
+    //'debug': 'all',
+    // 'metadata.broker.list': ['moped-01.srvs.cloudkafka.com:9094', 'moped-02.srvs.cloudkafka.com:9094' , 'moped-03.srvs.cloudkafka.com:9094'],
+    // 'max.poll.interval.ms' : 3600000,
+    'metadata.broker.list': 'localhost:9092',
+    'reconnect.backoff.ms': 100,
+    'reconnect.backoff.max.ms': 1000,
+    // 'security.protocol' : 'SASL_SSL',
+    // 'sasl.mechanisms': 'SCRAM-SHA-256',
+    // 'sasl.username': "4lcfy0wc",
+    // 'sasl.password': "H-mklk1JKFBRdU0Pi54euNb96GCi7Xvm",
+    "socket.keepalive.enable": true,
+    'group.id': gid,
+    'enable.auto.commit': false
+  });
+
+  //var topicName = '4lcfy0wc-default';
+  var topicName = "Streaming"
+  
+//logging debug messages, if debug is enabled
+  consumer.on('event.log', function(log) {
+    console.log(log);
+  });
+
+//logging all errors
+  consumer.on('event.error', function(err) {
+    console.error('Error from consumer');
+    console.error(err);
+  });
+
+//counter to commit offsets every numMessages are received
+  var counter = 0;
+  var numMessages = 5;
+
+  consumer.on('ready', function(arg) {
+    console.log('consumer ready.' + JSON.stringify(arg));
+    let high = 100
+    consumer.queryWatermarkOffsets(topicName, 0, 400, function (err, offsets) {
+      high = offsets.highOffset;
+      consumer.assign([{
+        topic: topicName,
+        partition: 0,
+        offset: high - 3
+      }]);
+      console.log("high: ", high)
+      consumer.consume();
+    });
+    //consumer.subscribe([topicName]);
+    //start consuming messages
+  });
+
+
+  consumer.on('data', function(m) {
+    counter++;
+
+    //committing offsets every numMessages
+    if (counter % numMessages === 0) {
+      console.log('calling commit');
+      consumer.commit(m);
+    }
+
+    // Output the actual message contents
+    console.log("consumer: ", gid, "offset: ",m.offset.toString(), "\nReceived message: ", m.value.toString());
+    if (m.key !== null && m.value !== null){
+      m.key = m.key.toString();
+      m.value = m.value.toString();
+      socket.emit("message", m);
+    }
+
+  });
+
+  consumer.on('disconnected', function(arg) {
+    console.log('consumer disconnected. ' + JSON.stringify(arg));
+  });
+
+//starting the consumer
+  consumer.connect();
+
+
+  socket.on("disconnect",function(reason){
+    console.log("Socket id[%s]: %s disconnected with reason => %s", socket.id ,socket.request.connection.remoteAddress, reason);
+    consumer.disconnect();
+  })
+}
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+
+/**
+ * Create IO Socket Layer
+ */
+
+var io = require('socket.io')(server);
+io.on('connection', (socket) => {
+
+  var socketId = socket.id;
+  var clientIp = socket.request.connection.remoteAddress;
+
+  console.log('User ' + clientIp + ' connected' + ' | Socket id: ' + socketId);
+
+  createKafkaConsumer(socket);
+
+});
+
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
+
+
+
+/**
+ * Creating a WebSocket that listens to the httpServer
+ */
+
+// webSocketServer = new WebSocketServer({
+//   httpServer: server,
+//   autoAcceptConnections: false
+// });
+//
+// function iSOriginAllowed(origin) {
+//   return true;
+// }
+
+/**
+ * Wait for a Websocket connection request by httpServer
+ */
+
+
+
+// webSocketServer.on('request', function(request) {
+//   if (!iSOriginAllowed(request.origin)) {
+//     request.reject();
+//     console.log('Connection from : ' + request.origin + 'rejected.');
+//     return;
+//   }
+//
+//   //var connection = request.accept('echo-protocol', request.origin);
+//   console.log('Connection accepted : ' + request.origin);
+//
+//   const Kafka = require('node-rdkafka');
+//   const crypto = require('crypto');
+//
+//   let topic = "test"
+//   let high = 0
+//   let gid = crypto.randomBytes(10).toString("hex");
+//
+//   //console.log(consumer.consume(2, function(err){console.log("callback",err)}))
+//   var stream = Kafka.KafkaConsumer.createReadStream({ 'group.id': gid, 'metadata.broker.list': 'localhost:9092'}, {}, {
+//     topics: ['test']
+//   });
+//
+//   stream.consumer.on("ready", function(){
+//     stream.consumer.queryWatermarkOffsets(topic,0,1000,function(err,offsets){
+//       high = offsets.highOffset;
+//       stream.consumer.assign([{topic:topic,
+//         partition: 0,
+//         offset: high-2
+//       }])
+//     })
+//   })
+//
+//   connection.on('message', function(message) {
+//     if (message.type === 'utf8') {
+//       console.log('Received Message: ' + message.utf8Data);
+//     }
+//   });
+//
+//   stream.on('data', function(message) {
+//     console.log('Got message');
+//     console.log(message.value.toString());
+//     console.log("offset: ",high)
+//     stream.consumer.commit();
+//   });
+//
+//   connection.on('close', function(reasonCode, description) {
+//     stream.consumer.disconnect();
+//     console.log('Connection ' + connection.remoteAddress + 'disconnected.');
+//   });
+// });

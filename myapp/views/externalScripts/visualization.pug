@@ -1,0 +1,7 @@
+mixin visualization(choice)
+    if choice === "link"
+        link(rel="stylesheet", href="/visualization/visualization.css")
+    else
+        script(type="text/javascript" src="/visualization/visualization.js")
+        script(type="text/javascript" src="clientWebSocket.js")
+        script(src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js")
